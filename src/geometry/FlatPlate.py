@@ -4,16 +4,18 @@ from typing import List
 
 
 class FlatPlate(Airfoil):
-    def __init__(self, chord: float, thickness: float = 0.0, alpha_rad: float = 0.0):
+    def __init__(self, chord: float, alpha_rad: float = 0.0):
         """Simple FlatPlate geometry container."""
         self.chord = float(chord)
-        self.thickness = float(thickness)
         self.alpha_rad = float(alpha_rad)
         self.x: List[float] = []
         self.y: List[float] = []
 
-    @classmethod
-    def from_dimensions(cls, chord: float, alpha_rad: float = 0.0) -> "FlatPlate":
+    def set_alpha(self, alpha_rad: float):
+        """Set angle of attack in radians."""
+        self.alpha_rad = float(alpha_rad)
+
+    def orient_to_alpha(self):
         """Create a flat plate geometry given chord and angle of attack.
 
         Args:
@@ -23,10 +25,13 @@ class FlatPlate(Airfoil):
         Returns:
             FlatPlate: instance with computed x, y coordinates
         """
-        inst = cls(chord=chord, thickness=0.0, alpha_rad=alpha_rad)
+
+        assert self.chord > 0.0, "Chord must be positive."
+        assert self.alpha_rad >= -math.pi/2 and self.alpha_rad <= math.pi/2, "Alpha must be between -90 and 90 degrees in radians."
+
 
         # original coordinates: leading (0) and trailing (chord) edges
-        x = [0.0, inst.chord]
+        x = [0.0, self.chord]
         y = [0.0, 0.0]
 
         # rotate about quarter-chord point c/4 by alpha_rad
@@ -44,7 +49,7 @@ class FlatPlate(Airfoil):
             x_rot.append(xr + c4)
             y_rot.append(yr)
 
-        inst.x = x_rot
-        inst.y = y_rot
+        self.x = x_rot
+        self.y = y_rot
 
-        return inst
+        return
