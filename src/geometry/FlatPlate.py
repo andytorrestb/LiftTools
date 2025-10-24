@@ -35,9 +35,9 @@ class FlatPlate(Airfoil):
         y = [0.0, 0.0]
 
         # rotate about quarter-chord point c/4 by alpha_rad
-        c4 = inst.chord / 4.0
-        ca = math.cos(-1*inst.alpha_rad)
-        sa = math.sin(inst.alpha_rad)
+        c4 = self.chord / 4.0
+        ca = math.cos(-1*self.alpha_rad)
+        sa = math.sin(-1*self.alpha_rad)
 
         x_rot: List[float] = []
         y_rot: List[float] = []
