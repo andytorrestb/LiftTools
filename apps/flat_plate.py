@@ -2,9 +2,10 @@ import apps_header
 
 from matplotlib import pyplot as plt
 import numpy as np
+import math
 
-import WeisingersApprox as wa
-import ThinAirfoilTheory as tat
+import models.WeisingersApprox as wa
+import models.ThinAirfoilTheory as tat
 
 import geometry.FlatPlate as fp
 
@@ -12,16 +13,15 @@ if __name__ == "__main__":
     # Load flat plate and plot at various angles of attack
     # Provides a simple sanity check of geometry rotation.
     chord = 1.0  # chord length
-    alpha = np.linspace(0, 90, 5)  # angles of attack in degrees
+    alpha = np.linspace(0, math.pi/2.0, 5)  # angles of attack in radians
     flat_plate_geom = fp.FlatPlate(chord=chord)
 
     plt.figure(figsize=(8, 4))
     for a in alpha:
          # Load flate plate geometry with coordinates rotated
          # according to angle of attack (alpha_rad).
-         alpha_rad = a * 3.14159 / 180.0  # convert to radians
         #  flat_plate_geom.set_alpha(alpha_rad)
-         flat_plate_geom.alpha['value'] = alpha_rad
+         flat_plate_geom.alpha['value'] = a
          flat_plate_geom.compute_endpoint_values()
          
          # Plit coordinates for comparison.
