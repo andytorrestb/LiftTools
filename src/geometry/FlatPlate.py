@@ -39,14 +39,17 @@ class FlatPlate(Airfoil):
         Output
         - ((x0, y0), (x1, y1)) expressions (always SymPy types)
         """
-        c_sym = sym.sympify(c) if c is not None else sym.Symbol('c', real=True)
-        a_sym = sym.sympify(a) if a is not None else sym.Symbol('a', real=True)
-        p_sym = sym.sympify(p) if p is not None else c_sym/4
+        c_sym = sym.sympify(c) if c is not None else self.chord['symbol']
+        a_sym = sym.sympify(a) if a is not None else self.alpha['symbol']
+        p_sym = sym.sympify(p) if p is not None else self.pivot['symbol']
 
-        x0 = p_sym + (0 - p_sym)*sym.cos(a_sym)
-        y0 = (0 - p_sym)*sym.sin(a_sym)
-        x1 = p_sym + (c_sym - p_sym)*sym.cos(a_sym)
-        y1 = (c_sym - p_sym)*sym.sin(a_sym)
+        # Calculate locations of rotated endpoints about pivot p
+        # Convention: positive a_sym = CLOCKWISE rotation
+        # => use cos(a) unchanged, flip sign on sin terms compared to CCW
+        x0 = p_sym + (0 - p_sym) * sym.cos(a_sym)
+        y0 = -(0 - p_sym) * sym.sin(a_sym)
+        x1 = p_sym + (c_sym - p_sym) * sym.cos(a_sym)
+        y1 = -(c_sym - p_sym) * sym.sin(a_sym)
         return (x0, y0), (x1, y1)
 
     def compute_endpoint_values(self):
