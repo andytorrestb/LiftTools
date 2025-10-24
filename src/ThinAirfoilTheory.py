@@ -4,6 +4,9 @@ class ThinAirfoilTheory(AirfoilModel):
 
     def solve(self) -> dict:
         cl = 0.0
-        results = {'cl': cl}
+        results = {
+            'cl': cl,
+            'alpha_rad': float(self.alpha_rad),
+        }
         return results
     pass

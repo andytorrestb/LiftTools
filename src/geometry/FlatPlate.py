@@ -1,6 +1,9 @@
 from .Airfoil import Airfoil
 import math
-from typing import List
+from typing import List, Tuple
+
+# Require SymPy via our utilities; FlatPlate always drives from symbolic expressions
+from symbolic.utils import sym, eval_numeric
 
 
 class FlatPlate(Airfoil):
@@ -15,41 +18,64 @@ class FlatPlate(Airfoil):
         """Set angle of attack in radians."""
         self.alpha_rad = float(alpha_rad)
 
-    def orient_to_alpha(self):
-        """Create a flat plate geometry given chord and angle of attack.
+    @staticmethod
+    def symbolic_endpoints(c=None, a=None, p=None) -> Tuple[Tuple[object, object], Tuple[object, object]]:
+        """Return SymPy expressions for endpoints rotated about a pivot.
 
-        Args:
-            chord (float): chord length
-            alpha_rad (float): angle of attack in radians
+        Inputs
+        - c: chord length (SymPy symbol or numeric)
+        - a: angle of attack in radians (SymPy symbol or numeric)
+        - p: pivot location along x; defaults to c/4
 
-        Returns:
-            FlatPlate: instance with computed x, y coordinates
+        Output
+        - ((x0, y0), (x1, y1)) expressions (always SymPy types)
         """
+        c_sym = sym.sympify(c) if c is not None else sym.Symbol('c', real=True)
+        a_sym = sym.sympify(a) if a is not None else sym.Symbol('a', real=True)
+        p_sym = sym.sympify(p) if p is not None else c_sym/4
 
+        x0 = p_sym + (0 - p_sym)*sym.cos(a_sym)
+        y0 = (0 - p_sym)*sym.sin(a_sym)
+        x1 = p_sym + (c_sym - p_sym)*sym.cos(a_sym)
+        y1 = (c_sym - p_sym)*sym.sin(a_sym)
+        return (x0, y0), (x1, y1)
+
+    def orient_to_alpha(self):
+        """Compute endpoints (rotated about quarter-chord) and assign self.x, self.y."""
         assert self.chord > 0.0, "Chord must be positive."
-        assert self.alpha_rad >= -math.pi/2 and self.alpha_rad <= math.pi/2, "Alpha must be between -90 and 90 degrees in radians."
+        assert -math.pi/2 <= self.alpha_rad <= math.pi/2, (
+            "Alpha must be between -90 and 90 degrees in radians."
+        )
 
+        (x0_expr, y0_expr), (x1_expr, y1_expr) = self.symbolic_endpoints(
+            c=self.chord, a=self.alpha_rad, p=None
+        )
 
-        # original coordinates: leading (0) and trailing (chord) edges
-        x = [0.0, self.chord]
-        y = [0.0, 0.0]
+        x0 = eval_numeric(x0_expr)
+        y0 = eval_numeric(y0_expr)
+        x1 = eval_numeric(x1_expr)
+        y1 = eval_numeric(y1_expr)
 
-        # rotate about quarter-chord point c/4 by alpha_rad
-        c4 = self.chord / 4.0
-        ca = math.cos(-1*self.alpha_rad)
-        sa = math.sin(-1*self.alpha_rad)
-
-        x_rot: List[float] = []
-        y_rot: List[float] = []
-        for xi, yi in zip(x, y):
-            xt = xi - c4
-            yt = yi
-            xr = xt * ca - yt * sa
-            yr = xt * sa + yt * ca
-            x_rot.append(xr + c4)
-            y_rot.append(yr)
-
-        self.x = x_rot
-        self.y = y_rot
+        self.x = [x0, x1]
+        self.y = [y0, y1]
 
         return
+
+    def sample(self, n: int) -> Tuple[List[float], List[float]]:
+        """Return n points along the straight plate between endpoints.
+
+        Requires endpoints to be available via orient_to_alpha().
+        """
+        assert self.x and self.y, (
+            "Call orient_to_alpha() first to generate endpoints."
+        )
+        assert n >= 2, "n must be >= 2"
+        x0, x1 = self.x
+        y0, y1 = self.y
+        xs: List[float] = []
+        ys: List[float] = []
+        for i in range(n):
+            s = i/(n-1)
+            xs.append(x0 + s*(x1 - x0))
+            ys.append(y0 + s*(y1 - y0))
+        return xs, ys
