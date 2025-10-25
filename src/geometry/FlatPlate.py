@@ -7,26 +7,6 @@ from typing import List, Tuple
 from symbolic.utils import sym, eval_numeric
 
 class FlatPlate(Airfoil):
-    def __init__(self, chord: float, pivot: float = 0.25):
-        """Simple FlatPlate geometry container."""
-
-        self.chord = {
-            'value': float(chord),
-            'symbol': sym.Symbol('c', real=True),
-        }
-
-        self.pivot = {
-            'value': float(pivot),
-            'symbol': sym.Symbol('p', real=True),
-        }
-
-        self.alpha = {
-            'value': 0.0,
-            'symbol': sym.Symbol('a', real=True),
-        }
-
-        self.x: List[float] = []
-        self.y: List[float] = []
 
     def symbolic_endpoints(self, c=None, a=None, p=None) -> Tuple[Tuple[object, object], Tuple[object, object]]:
         """Return SymPy expressions for endpoints rotated about a pivot.
