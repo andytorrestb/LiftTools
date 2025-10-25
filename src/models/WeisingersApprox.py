@@ -1,1 +1,1 @@
-from AirFoilModel import AirfoilModel
+from models.AirFoilModel import AirfoilModel
