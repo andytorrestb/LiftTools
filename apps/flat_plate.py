@@ -33,17 +33,19 @@ if __name__ == "__main__":
          plt.grid(True)
     plt.savefig(f"flat_plate_rotations.png")
 
-    # # Run Thin Airfoil Theory model on flat plate using same geometry and alpha values.
-    # for a in alpha:
-    #     alpha_rad = a * 3.14159 / 180.0  # convert to radians
-    #     flat_plate_geom = fp.FlatPlate.from_dimensions(chord=chord, alpha_rad=alpha_rad)
+    # Run Thin Airfoil Theory model on flat plate using same geometry and alpha values.
+    for a in alpha:
+          flat_plate_geom.alpha['value'] = a
+          flat_plate_geom.compute_endpoint_values()
 
-    #     tat_model = tat.ThinAirfoilTheory(
-    #         geometry=flat_plate_geom,
-    #         alpha_rad=alpha_rad,
-    #         panels=1,
-    #     )
-    #     results = tat_model.solve()
-    #     cl = results['cl']
-    #     print(f"TAT: Alpha = {a} deg, CL = {cl:.4f}")
+          tat_model = tat.ThinAirfoilTheory(
+               geometry=flat_plate_geom,
+               alpha_rad=a,
+               panels=1,
+          )
+
+          tat_model.set_z_expr(foil_type="plate")
+          results = tat_model.solve()
+          cl = results['cl']
+          print(f"TAT: Alpha = {a} deg, CL = {cl:.4f}")
 

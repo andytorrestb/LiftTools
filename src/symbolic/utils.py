@@ -126,3 +126,20 @@ def _to_symbol(a: Any) -> Basic:
         return sym.Symbol(a)
     # sympify as last resort (e.g., sympy function of Symbol)
     return sym.sympify(a)
+
+
+def to_callable(expr: Any, args: Sequence[Any]) -> Callable:
+    """Return a fast NumPy-backed callable for the given expression.
+
+    Parameters
+    - expr: SymPy expression to evaluate
+    - args: Ordered sequence of symbols/arguments for the callable
+
+    Returns
+    - A Python callable that accepts NumPy arrays or scalars for the args
+      and returns NumPy arrays/scalars accordingly.
+    """
+    # Normalize args to SymPy symbols/expressions
+    sym_args = tuple(_to_symbol(a) for a in args)
+    # Use NumPy module for fast vectorized evaluation
+    return lambdify(sym_args, expr, modules=["numpy"])

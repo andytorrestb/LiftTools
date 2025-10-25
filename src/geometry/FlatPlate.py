@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Tuple
 
 # Require SymPy via our utilities; FlatPlate always drives from symbolic expressions
-from symbolic.utils import sym, eval_numeric
+from symbolic.utils import sym, eval_numeric, to_callable
 
 class FlatPlate(Airfoil):
 
@@ -24,8 +24,8 @@ class FlatPlate(Airfoil):
         p_sym = sym.sympify(p) if p is not None else self.pivot['symbol']
 
         # Calculate locations of rotated endpoints about pivot p
-        # Convention: positive a_sym = CLOCKWISE rotation
-        # => use cos(a) unchanged, flip sign on sin terms compared to CCW
+        # Convention here: positive a_sym = CLOCKWISE rotation
+        # This matches convention in aerodynamics.
         x0 = p_sym + (0 - p_sym) * sym.cos(a_sym)
         y0 = -(0 - p_sym) * sym.sin(a_sym)
         x1 = p_sym + (c_sym - p_sym) * sym.cos(a_sym)
@@ -104,3 +104,30 @@ class FlatPlate(Airfoil):
         ys_arr = fy(s_vals, c_val, a_val, p_val)
 
         return list(np.asarray(xs_arr, dtype=float)), list(np.asarray(ys_arr, dtype=float))
+    
+    def symbolic_line_expr(self, c=None, a=None, p=None):
+        """Return the line in slope-intercept form y = m*x + b for the rotated plate.
+
+        Uses symbolic endpoints to derive:
+        - m = (y1 - y0) / (x1 - x0) = tan(alpha)
+        - b = y0 - m*x0 = -p * tan(alpha)
+
+        Note: Not defined for vertical orientation (alpha = ±pi/2).
+
+        If c/a/p are None, uses the instance's symbols.
+        Returns: (x_symbol, y_of_x_expr, m_expr, b_expr)
+        """
+        # Use instance symbols if not provided
+        c_sym = sym.sympify(c) if c is not None else self.chord['symbol']
+        a_sym = sym.sympify(a) if a is not None else self.alpha['symbol']
+        p_sym = sym.sympify(p) if p is not None else self.pivot['symbol']
+
+        # Derive slope and intercept from the symbolic endpoints
+        (x0, y0), (x1, y1) = self.symbolic_endpoints(c=c_sym, a=a_sym, p=p_sym)
+        m = sym.simplify((y1 - y0) / (x1 - x0))
+        b = sym.simplify(y0 - m * x0)
+
+        # y(x) = m*x + b
+        x = sym.Symbol('x', real=True)
+        return sym.simplify(m * x + b)
+    
