@@ -6,6 +6,28 @@ from typing import List, Tuple
 # Require SymPy via our utilities; FlatPlate always drives from symbolic expressions
 from symbolic.utils import sym, eval_numeric, to_callable
 
+def rotate_point(point: Tuple[float, float], pivot: Tuple[float, float], angle_rad: float) -> Tuple[float, float]:
+    """Rotate a point around a pivot by a given angle in radians.
+
+    Parameters
+    - point: (x, y) coordinates of the point to rotate
+    - pivot: (x, y) coordinates of the pivot point
+    - angle_rad: rotation angle in radians (positive = clockwise)
+
+    Returns
+    - (x_rotated, y_rotated): coordinates of the rotated point
+    """
+    x1 = point[0] - pivot[0]
+    y1 = point[1] - pivot[1]
+
+    angle_rad = -angle_rad  # Convert to counter-clockwise for standard rotation
+    x_rotated = x1 * math.cos(angle_rad) + y1 * math.sin(angle_rad)
+    y_rotated = x1 * math.sin(angle_rad) - y1 * math.cos(angle_rad)
+
+    x_final = x_rotated + pivot[0]
+    y_final = y_rotated + pivot[1]
+    return (x_final, y_final)
+
 class FlatPlate(Airfoil):
     # Optional flap parameters (may be set externally by models)
     flap_deflection_rad: float = 0.0  # positive = clockwise per class convention
@@ -240,3 +262,86 @@ class FlatPlate(Airfoil):
         ys = f_y(xs, subs[self.chord['symbol']], subs[self.alpha['symbol']], subs[self.pivot['symbol']], subs[sym.Symbol('l_le', real=True)], subs[sym.Symbol('delta', real=True)])
 
         return list(np.asarray(xs, dtype=float)), list(np.asarray(ys, dtype=float))
+    
+
+    def plot_flapped_plate(self, subplot = False) -> None:
+        """Plot the flapped flat plate using Matplotlib for visual verification.
+
+        Uses current numeric values for chord, alpha, pivot, flap_length_le,
+        and flap_deflection_rad.
+
+        Plot is produced using hard-coded solution.
+        """
+
+        assert hasattr(self, 'flap_length_le'), "Flap length not set."
+        assert hasattr(self, 'flap_deflection_rad'), "Flap deflection not set."
+        assert hasattr(self, 'alpha'), "Alpha not set."
+        assert self.chord['value'] > 0.0, "Chord must be positive."
+
+        # Set up x coordinates for the wing and flap.
+        k = self.flap_length_le
+        c = self.chord['value']
+        # n = 100
+        # x_wing = np.linspace(0, k*c, k*n)
+        # x_flap = np.linspace(k*c, c, (1-k)*n)
+
+        # Slope of plates (main and flap)
+        m_wing = math.tan(-self.alpha['value'])
+        m_flap = math.tan(-(self.alpha['value'] + self.flap_deflection_rad))
+
+        # For wing: find y intercept and x-bounds.
+        # Wing equations (straight line: y=mx+b)
+        b_wing = -m_wing * self.pivot['value']
+        pivot = (0.25*c, 0.0)
+        x_LE_wing, y_LE_wing = 0.0, 0.0
+        LE_wing = (x_LE_wing, y_LE_wing)
+        LE_wing_rotated = rotate_point(LE_wing, pivot, self.alpha['value'])
+
+        x_TE_wing, y_TE_wing = k*c, 0.0
+        TE_wing = (x_TE_wing, y_TE_wing)
+        TE_wing_rotated = rotate_point(TE_wing, pivot, self.alpha['value'])
+
+        # For flapp: find y intercept and x-bounds.
+        b_flap = TE_wing_rotated[1] - m_flap * TE_wing_rotated[0]
+
+        LE_flap_rotated = TE_wing_rotated
+        x_TE_flap, y_TE_flap = c, 0.0
+        TE_flap = (x_TE_flap, y_TE_flap)
+        total_deflection = self.alpha['value'] + self.flap_deflection_rad
+        TE_flap_rotated = rotate_point(TE_flap, (k*c, 0.0), total_deflection)
+
+        # Create x-coordinate using caculated endpints.
+        n = 100
+        x_wing = np.linspace(LE_wing_rotated[0], TE_wing_rotated[0], int(k*n))
+        x_flap = np.linspace(TE_wing_rotated[0], TE_flap_rotated[0], int((1-k)*n))
+
+        # Calculate y-coordinates using line equations.
+        y_wing = m_wing * x_wing + b_wing
+        y_flap = m_flap * x_flap + b_flap
+
+        if subplot:
+            return (x_wing, y_wing), (x_flap, y_flap)
+        else:
+            # Plot the flapped flat plate.
+            import matplotlib.pyplot as plt 
+            plt.figure(figsize=(8, 4))
+            plt.plot(x_wing, y_wing, label="Main Plate")
+            plt.plot(x_flap, y_flap, label="Flap")
+            plt.title("Flapped Flat Plate Geometry")
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.legend()
+            plt.grid(True)
+            plt.savefig("flapped_flat_plate.png")
+            plt.clf()
+        return
+
+        
+
+
+
+
+
+
+        # y-intercepts
+
