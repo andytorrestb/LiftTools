@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List
+from unittest import case
 
 from symbolic.utils import sym
 
@@ -56,5 +57,3 @@ class Airfoil:
         if hasattr(self, 'compute_endpoint_values') and callable(getattr(self, 'compute_endpoint_values')):
             # type: ignore[attr-defined]
             self.compute_endpoint_values()  # noqa: F401
-
-

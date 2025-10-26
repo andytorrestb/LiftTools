@@ -7,6 +7,9 @@ from typing import List, Tuple
 from symbolic.utils import sym, eval_numeric, to_callable
 
 class FlatPlate(Airfoil):
+    # Optional flap parameters (may be set externally by models)
+    flap_deflection_rad: float = 0.0  # positive = clockwise per class convention
+    flap_length_le: float = 1.0       # fraction of chord measured from LE to hinge
 
     def symbolic_endpoints(self, c=None, a=None, p=None) -> Tuple[Tuple[object, object], Tuple[object, object]]:
         """Return SymPy expressions for endpoints rotated about a pivot.
@@ -130,4 +133,110 @@ class FlatPlate(Airfoil):
         # y(x) = m*x + b
         x = sym.Symbol('x', real=True)
         return sym.simplify(m * x + b)
-    
+
+    # --- Flapped geometry helpers -----------------------------------------
+    def symbolic_hinge_point(self, c=None, a=None, p=None, l_le=None):
+        """Return SymPy expressions (x_h, y_h) for the flap hinge point.
+
+        Hinge is located at x = l_le * c on the unrotated chord and then
+        rotated about pivot p by angle a (clockwise-positive convention).
+        """
+        c_sym = sym.sympify(c) if c is not None else self.chord['symbol']
+        a_sym = sym.sympify(a) if a is not None else self.alpha['symbol']
+        p_sym = sym.sympify(p) if p is not None else self.pivot['symbol']
+        l_sym = sym.sympify(l_le) if l_le is not None else sym.Symbol('l_le', real=True)
+
+        x_h = p_sym + (l_sym * c_sym - p_sym) * sym.cos(a_sym)
+        y_h = -(l_sym * c_sym - p_sym) * sym.sin(a_sym)
+        return x_h, y_h
+
+    def symbolic_flapped_piecewise(self, c=None, a=None, p=None, l_le=None, delta=None):
+        """Return y(x) for a flapped flat plate as a SymPy Piecewise.
+
+        Main plate: from LE to hinge follows rotation by a.
+        Flap: from hinge to new TE follows rotation by (a - delta) about hinge.
+
+        Returns a tuple:
+        - x symbol
+        - y_piecewise(x)
+        - (x0, y0): LE point after rotation by a
+        - (x_te, y_te): TE point after flap deflection
+        - (x_h, y_h): Hinge point
+        """
+        # Symbols
+        c_sym = sym.sympify(c) if c is not None else self.chord['symbol']
+        a_sym = sym.sympify(a) if a is not None else self.alpha['symbol']
+        p_sym = sym.sympify(p) if p is not None else self.pivot['symbol']
+        l_sym = sym.sympify(l_le) if l_le is not None else sym.Symbol('l_le', real=True)
+        d_sym = sym.sympify(delta) if delta is not None else sym.Symbol('delta', real=True)
+
+        x = sym.Symbol('x', real=True)
+
+        # Endpoints of the base (unflapped) plate rotated by a
+        (x0, y0), (x1, y1) = self.symbolic_endpoints(c=c_sym, a=a_sym, p=p_sym)
+
+        # Hinge point and flap length
+        x_h, y_h = self.symbolic_hinge_point(c=c_sym, a=a_sym, p=p_sym, l_le=l_sym)
+        flap_c = (1 - l_sym) * c_sym
+
+        # Lines: main and flap, as y = m x + b
+        # Using the class convention (clockwise-positive): slope = -tan(angle)
+        m_main = -sym.tan(a_sym)
+        b_main = sym.simplify(y0 - m_main * x0)  # must pass through LE as well
+        y_main = sym.simplify(m_main * x + b_main)
+
+        m_flap = -sym.tan(a_sym - d_sym)
+        b_flap = sym.simplify(y_h - m_flap * x_h)
+        y_flap = sym.simplify(m_flap * x + b_flap)
+
+        # New TE point located flap_c from hinge at orientation theta_flap = -(a - delta)
+        theta_flap = -(a_sym - d_sym)
+        x_te = sym.simplify(x_h + flap_c * sym.cos(theta_flap))
+        y_te = sym.simplify(y_h + flap_c * sym.sin(theta_flap))
+
+        # Piecewise by x relative to hinge x; assumes not vertical
+        y_piece = sym.Piecewise((y_main, x <= x_h), (y_flap, True))
+        return x, y_piece, (x0, y0), (x_te, y_te), (x_h, y_h)
+
+    def sample_flapped_by_x(self, n: int) -> Tuple[List[float], List[float]]:
+        """Sample the flapped geometry y(x) along x between LE and new TE.
+
+        Uses current numeric values for chord, alpha, pivot, flap_length_le,
+        and flap_deflection_rad. Returns x,y lists of length n.
+        """
+        assert n >= 2, "n must be >= 2"
+
+        # Build symbolic piecewise once
+        x_sym, y_piece, (x0, y0), (x_te, y_te), (x_h, y_h) = self.symbolic_flapped_piecewise(
+            c=None, a=None, p=None, l_le=self.flap_length_le, delta=self.flap_deflection_rad
+        )
+
+        # Lambdify y(x) with explicit arg order
+        args = [
+            x_sym,
+            self.chord['symbol'],
+            self.alpha['symbol'],
+            self.pivot['symbol'],
+            sym.Symbol('l_le', real=True),
+            sym.Symbol('delta', real=True),
+        ]
+        f_y = to_callable(y_piece, args)
+
+        # Numeric endpoints for x-range
+        subs = {
+            self.chord['symbol']: self.chord['value'],
+            self.alpha['symbol']: self.alpha['value'],
+            self.pivot['symbol']: self.pivot['value'],
+            sym.Symbol('l_le', real=True): float(getattr(self, 'flap_length_le', 1.0)),
+            sym.Symbol('delta', real=True): float(getattr(self, 'flap_deflection_rad', 0.0)),
+        }
+
+        x0_v = eval_numeric(x0, subs)
+        xte_v = eval_numeric(x_te, subs)
+        x_start = min(x0_v, xte_v)
+        x_end = max(x0_v, xte_v)
+
+        xs = np.linspace(x_start, x_end, n)
+        ys = f_y(xs, subs[self.chord['symbol']], subs[self.alpha['symbol']], subs[self.pivot['symbol']], subs[sym.Symbol('l_le', real=True)], subs[sym.Symbol('delta', real=True)])
+
+        return list(np.asarray(xs, dtype=float)), list(np.asarray(ys, dtype=float))
