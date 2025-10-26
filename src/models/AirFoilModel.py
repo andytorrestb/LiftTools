@@ -37,3 +37,30 @@ class AirfoilModel(ABC):
         Additional keys (pressure distribution, gamma, etc.) are allowed.
         """
 
+    def set_cambmer(self, z_expr) -> None:
+
+        assert self.geometry is not None, "Geometry must be set before setting camber."
+        assert hasattr(self.geometry.camber[''], 'set_camber'), (
+            "Geometry must implement set_camber method."
+        )
+        assert callable(self.geometry.set_camber), (
+            "Geometry's set_camber must be callable."
+        )
+        assert self.geom
+        assert z_expr is not None, "Camber expression must be provided."
+        self.geometry.set_camber(z_expr)
+        return
+
+    def set_flow_conditions(
+        self,
+        U_inf: float = 1.0, # m/s
+        rho_inf: float = 1.225, # kg/m^3
+    ) -> None:
+        """Set flow conditions for the model.
+
+        Parameters
+        - alpha_rad: angle of attack in radians (optional)
+        """
+        self.U_inf = float(U_inf)
+        self.rho_inf = float(rho_inf)
+        return
