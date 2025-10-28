@@ -43,14 +43,18 @@ class WeisingersApprox(AirfoilModel):
         r21 = G2_x - V1_x
         r22 = G2_x - V2_x
 
+        # Calculate flow tangency conditions at control points.
+        dzdx1 = math.tan(-1*alpha)  # Flat plate has zero slope on main section
+        dzdx2 = math.tan(-1*(alpha + delta))  # Flap slope
+
         # Define influence coefficient matrix
-        A = np.array([[1, 1],
-                      [math.sin(self.geometry.flap_deflection_rad), -1]])
+        A = (1/(2.0*math.pi)) * np.array([[-1/r11, 1/r21],
+                      [-1/r12, -1/r22]])
         
         # Define right-hand side vector using flow tangency conditions.
         b = np.array([
-            2 * math.pi * alpha,
-            2 * math.pi * (alpha - delta)
+            (dzdx1 * math.cosh(alpha) - math.sin(alpha)) * self.U_inf,
+            (dzdx2 * math.cosh(alpha + delta) - math.sin(alpha + delta)) * self.U_inf
         ])  
 
         G = np.linalg.solve(A, b)

@@ -39,6 +39,7 @@ if __name__ == "__main__":
      plt.clf()
 
      # Step 2) Run Thin Airfoil Theory model on flat plate using same geometry and alpha values.
+     print('=== Run Thin Airfoil Theory ===')
      for a in alpha:
           flat_plate_geom.alpha['value'] = a
           flat_plate_geom.compute_endpoint_values()
@@ -55,7 +56,7 @@ if __name__ == "__main__":
           print(f"TAT: Alpha = {math.degrees(a):.0f} deg, CL = {cl:.4f}")
 
      # Step 3) Plot profiles of flapped plate for visual verification.
-     deflection_rad = math.radians(-15)  # 15 degree flap deflection
+     deflection_rad = math.radians(0)  # 15 degree flap deflection
      flap_l_le = 0.7                    # hinge at 70% chord from LE
      plt.figure(figsize=(8, 4))
      for a in alpha:
@@ -92,8 +93,8 @@ if __name__ == "__main__":
 
           wa_model.set_flap(deflection_rad=deflection_rad, length_le=0.7)
           wa_model.set_flow_conditions(
-               U_inf=10.0,  # m/s
-               rho_inf=1.225,  # kg/m^3
+               U_inf=90.0,  # m/s
+               rho_inf=1.2,  # kg/m^3
           )
           results = wa_model.solve_plate()
           cl = results['cl']
