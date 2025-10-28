@@ -72,3 +72,12 @@ class WeisingersApprox(AirfoilModel):
         }
 
         return results
+    
+    def solve_naca_foil(self) -> dict:
+        # Placeholder for NACA airfoil specific Weisinger's Approximation solution
+        # Step 1) Distrcretize camber line into panels
+        # Step 2) Adjust for angle of attack and flap deflection angle.
+        # Step 3) Calculate control points (vortex source and flow tangency locations)
+        # Step 4) Set up influence coefficient matrix and RHS vector.
+        # Step 5) Solve for vortex strengths and compute lift, drag, moment coefficients.
+        pass
