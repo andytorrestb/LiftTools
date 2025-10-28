@@ -17,12 +17,8 @@ class AirfoilModel(ABC):
     def __init__(
         self,
         geometry: Geometry | None = None,
-        alpha_rad: float = 0.0,
-        panels: int = 100,
     ) -> None:
         self.geometry = geometry or Geometry()
-        self.alpha_rad = float(alpha_rad)
-        self.panels = int(panels)
 
     # --- small contract -------------------------------------------------
     # solve() -> dict with keys at least: 'cl' (float) and 'alpha_rad' (float)

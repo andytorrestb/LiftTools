@@ -57,3 +57,14 @@ class Airfoil:
         if hasattr(self, 'compute_endpoint_values') and callable(getattr(self, 'compute_endpoint_values')):
             # type: ignore[attr-defined]
             self.compute_endpoint_values()  # noqa: F401
+
+    
+    def set_flap_properties(self, k: float, delta: float) -> None:
+        """Set flap properties for the airfoil.
+
+        Parameters
+        - k: chordwise location of flap hinge as fraction of chord (0..1)
+        - delta: flap deflection angle in radians
+        """
+        self.flap_length_le = float(k)
+        self.flap_deflection_rad = float(delta)

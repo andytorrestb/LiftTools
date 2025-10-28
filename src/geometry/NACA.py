@@ -103,4 +103,4 @@ class NACA(Airfoil):
         plt.axis('equal')
         plt.grid(True)
         plt.legend()
-        plt.show()
+        plt.savefig(f"NACA_{self.naca_code}_airfoil.png")

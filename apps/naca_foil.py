@@ -5,6 +5,7 @@ import math
 import numpy as np
 
 from geometry import NACA
+from models import WeisingersApprox as wa
 
 if __name__ == "__main__":
     # Step 0) Define study constants
@@ -21,6 +22,16 @@ if __name__ == "__main__":
     naca0012 = NACA.NACA(naca_code="0012")
     naca0012.read_dat_file("../data/NACA0012.dat")
     naca0012.plot_airfoil()
+
+    wa_naca0012 = wa.WeisingersApprox(geometry=naca0012)
+    
+    wa_naca0012.geometry.set_flap_properties(
+        k=k,
+        delta=delta[2]  # e.g., 10 degrees
+    )
+
+    print(wa_naca0012.geometry.flap_length_le)
+    print(wa_naca0012.geometry.flap_deflection_rad)
 
     # Study 2) NACA 0012 airfoil (high resolution case N=100)
     
