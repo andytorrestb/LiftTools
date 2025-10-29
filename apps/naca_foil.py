@@ -21,6 +21,7 @@ if __name__ == "__main__":
     # Run Weisinger's Approximation model.
     naca0012 = NACA.NACA(naca_code="0012")
     naca0012.read_dat_file("../data/NACA0012.dat")
+    naca0012.set_camber()
     naca0012.plot_airfoil()
 
     wa_naca0012 = wa.WeisingersApprox(geometry=naca0012)
@@ -30,6 +31,8 @@ if __name__ == "__main__":
         delta=delta[2]  # e.g., 10 degrees
     )
 
+
+
     print(wa_naca0012.geometry.flap_length_le)
     print(wa_naca0012.geometry.flap_deflection_rad)
 
@@ -38,6 +41,7 @@ if __name__ == "__main__":
     # Study 3) NACA 2412 airfoil (low resolution)
     naca2412 = NACA.NACA(naca_code="2412")
     naca2412.read_dat_file("../data/NACA2412.dat")
+    naca2412.set_camber()
     naca2412.plot_airfoil()
 
 

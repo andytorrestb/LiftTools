@@ -1,3 +1,5 @@
+import numpy as np
+
 from .Airfoil import Airfoil
 
 def parse_naca4_digits(digits: str) -> tuple[float, float, float]:
@@ -62,7 +64,8 @@ class NACA(Airfoil):
         )
 
         # Set the camber line in the geometry
-        self.set_cambmer(z_expr)
+        # Note: call the correctly named setter
+        self.set_camber(z_expr)
     
     def read_dat_file(self, filepath: str) -> None:
         """Read airfoil coordinates from a DAT file.
@@ -78,16 +81,71 @@ class NACA(Airfoil):
 
         # Split at the repeated leading-edge x≈0 so each series starts at x=0
         mid_index = max(1, len(x) // 2)
-        self.x_upper = [0.0] + x[:mid_index][::-1]
-        self.y_upper = [0.0] + y[:mid_index][::-1]
-        self.x_lower = x[mid_index:]
-        self.y_lower = y[mid_index:]
+        self.x_upper = np.array([0.0] + x[:mid_index][::-1])
+        self.y_upper = np.array([0.0] + y[:mid_index][::-1])
+        self.x_lower = np.array(x[mid_index:])
+        self.y_lower = np.array(y[mid_index:])
 
         print("Airfoil coordinates loaded from DAT file.")
         print(f"Upper surface points: {self.x_upper}")
         print(f"Lower surface points: {self.x_lower}")
 
     pass
+
+    def is_valid_dat(self) -> bool:
+        """Validate loaded DAT coordinates.
+
+        This verifies that the coordinate arrays exist, are finite, and that
+        the x-coordinates for upper and lower surfaces are identical at each
+        index (within a tiny numerical tolerance for floating-point data).
+
+        Returns
+        - True if validation passes, False otherwise.
+        """
+        import numpy as np
+
+        # Ensure attributes exist and are non-empty
+        required_attrs = ["x_upper", "y_upper", "x_lower", "y_lower"]
+        for attr in required_attrs:
+            if not hasattr(self, attr):
+                return False
+            val = getattr(self, attr)
+            if val is None:
+                return False
+
+        x_upper = np.asarray(getattr(self, "x_upper"))
+        x_lower = np.asarray(getattr(self, "x_lower"))
+
+        # Basic shape and finiteness checks
+        if x_upper.size == 0 or x_lower.size == 0:
+            return False
+        if x_upper.shape != x_lower.shape:
+            return False
+        if not (np.isfinite(x_upper).all() and np.isfinite(x_lower).all()):
+            return False
+
+        # Fast exact check first
+        if np.array_equal(x_upper, x_lower):
+            return True
+        else:
+            return False    
+
+    def set_camber(self, z_expr = None) -> None:
+        """Set the camber line expression for the airfoil.
+
+        Parameters
+        - z_expr: symbolic expression for camber line z(x)
+        """
+        if z_expr is None:
+            assert self.x_upper is not None, "Airfoil coordinates (x_upper) must be set before setting camber."
+            assert self.x_lower is not None, "Airfoil coordinates (x_lower) must be set before setting camber."
+            assert self.y_upper is not None, "Airfoil coordinates (y_upper) must be set before setting camber."
+            assert self.y_lower is not None, "Airfoil coordinates (y_lower) must be set before setting camber."
+            assert self.is_valid_dat(), "Loaded DAT coordinates are not valid."
+
+            self.z = 0.5*(self.y_upper + self.y_lower)  # Simplified assumption for camber line
+        else:
+            self.z = z_expr
 
 
     def plot_airfoil(self) -> None:
@@ -102,5 +160,10 @@ class NACA(Airfoil):
         plt.ylabel('y (thickness)')
         plt.axis('equal')
         plt.grid(True)
+
+        if self.z is not None and isinstance(self.z, np.ndarray):
+            
+            plt.plot(self.x_upper, self.z, 'r--', label='Camber Line')
+
         plt.legend()
         plt.savefig(f"NACA_{self.naca_code}_airfoil.png")
