@@ -1,12 +1,56 @@
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 from models.AirFoilModel import AirfoilModel
 
+def rotate_point(point: tuple[float, float], pivot: tuple[float, float], theta: tuple[float, float]) -> tuple[float, float]:
+    """Rotate a point (x, z) by angle alpha_rad around the origin."""
+    x_rot = x * math.cos(alpha_rad) - z * math.sin(alpha_rad)
+    z_rot = x * math.sin(alpha_rad) + z * math.cos(alpha_rad)
+    return x_rot, z_rot
+
 class WeisingersApprox(AirfoilModel):
+    def set_panels(self, n_panels: int) -> None:
+        assert self.geometry.z is not None, "Camber line must be set before discretizing."
+        # establish local name references for important data.
+        z = self.geometry.z
+        c = self.geometry.chord['value']
+        k = self.geometry.k
+
+        # Determine number of panels on main wing and flap
+        n_wing_panels = int(k*(n_panels+1))
+        n_flap_panels = n_panels - n_wing_panels
+
+        # Discretize and interpolate panels on main wing and flap
+        wing_panel_x = np.linspace(0, k*c, n_wing_panels)
+        wing_panel_z = np.interp(wing_panel_x, self.geometry.x_lower, z)
+
+        flap_panel_x = np.linspace(k*c, c, n_flap_panels+1)
+        flap_panel_z = np.interp(flap_panel_x, self.geometry.x_lower, z)
+
+        # Set to object properties for later use.
+        self.wing_panel_x = wing_panel_x
+        self.wing_panel_z = wing_panel_z    
+        self.flap_panel_x = flap_panel_x
+        self.flap_panel_z = flap_panel_z
+
+    def plot_panels(self) -> None:
+        plt.figure(figsize=(10, 4))
+        # plt.plot(self.geometry.x_lower, self.geometry.z, 'b-', label='Camber Line')
+        plt.plot(self.wing_panel_x, self.wing_panel_z, 'ro--', label='Wing Panels')
+        plt.plot(self.flap_panel_x, self.flap_panel_z, 'go--', label='Flap Panels')
+        plt.xlabel('x (chordwise)')
+        plt.ylabel('z (camber)')
+        plt.ylim(-0.1, 0.1)
+        plt.title('Airfoil Camber Line with Discretized Panels')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f"weisingers_approx_panels_naca{self.geometry.naca_code}.png")         
 
     def solve(self) -> dict:
         # Placeholder for Weisinger's Approximation solution method
+        print("Solving using Weisinger's Approximation...")
         pass
 
     def set_flap(self, deflection_rad: float, length_le: float) -> None:
@@ -14,6 +58,18 @@ class WeisingersApprox(AirfoilModel):
         self.geometry.flap_deflection_rad = float(deflection_rad)
         self.geometry.flap_length_le = float(length_le)
         pass
+
+
+    def orient_panels() -> None:
+        """Update panel coordinates for the current alpha if supported.
+
+        Subclasses that provide `compute_endpoint_values()` will have this
+        method call it to refresh x and y based on the current parameters.
+        """
+        assert self.geometry.alpha is not None, "Geometry must have alpha set before orienting panels."
+        assert self.geomeetry.delta is not None, "Geometry must have flap deflection set before orienting panels."
+
+
 
     def solve_plate(self) -> None:
         # Placeholder for setting control points specific to Weisinger's Approximation
@@ -73,11 +129,3 @@ class WeisingersApprox(AirfoilModel):
 
         return results
     
-    def solve_naca_foil(self) -> dict:
-        # Placeholder for NACA airfoil specific Weisinger's Approximation solution
-        # Step 1) Distrcretize camber line into panels
-        # Step 2) Adjust for angle of attack and flap deflection angle.
-        # Step 3) Calculate control points (vortex source and flow tangency locations)
-        # Step 4) Set up influence coefficient matrix and RHS vector.
-        # Step 5) Solve for vortex strengths and compute lift, drag, moment coefficients.
-        pass

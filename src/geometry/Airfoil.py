@@ -66,5 +66,5 @@ class Airfoil:
         - k: chordwise location of flap hinge as fraction of chord (0..1)
         - delta: flap deflection angle in radians
         """
-        self.flap_length_le = float(k)
-        self.flap_deflection_rad = float(delta)
+        self.k = float(k)
+        self.delta = float(delta)
