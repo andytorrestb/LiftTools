@@ -4,11 +4,21 @@ import matplotlib.pyplot as plt
 
 from models.AirFoilModel import AirfoilModel
 
-def rotate_point(point: tuple[float, float], pivot: tuple[float, float], theta: tuple[float, float]) -> tuple[float, float]:
-    """Rotate a point (x, z) by angle alpha_rad around the origin."""
-    x_rot = x * math.cos(alpha_rad) - z * math.sin(alpha_rad)
-    z_rot = x * math.sin(alpha_rad) + z * math.cos(alpha_rad)
-    return x_rot, z_rot
+def rotate_point(point: tuple[float, float], pivot: tuple[float, float], theta: float) -> tuple[float, float]:
+    """Rotate a point (x, z) about a pivot by angle theta (radians, CCW-positive)."""
+    # Flip sign of theta for CW-positive rotation
+    theta = -theta
+    
+    # Translate point to pivot-relative coordinates
+    x_rel = point[0] - pivot[0]
+    z_rel = point[1] - pivot[1]
+
+    # Apply standard 2D rotation without reusing the updated x
+    x_new = x_rel * math.cos(theta) - z_rel * math.sin(theta)
+    z_new = x_rel * math.sin(theta) + z_rel * math.cos(theta)
+
+    # Translate back to world coordinates
+    return (x_new + pivot[0], z_new + pivot[1])
 
 class WeisingersApprox(AirfoilModel):
     def set_panels(self, n_panels: int) -> None:
@@ -34,19 +44,25 @@ class WeisingersApprox(AirfoilModel):
         self.wing_panel_z = wing_panel_z    
         self.flap_panel_x = flap_panel_x
         self.flap_panel_z = flap_panel_z
+        # Debug prints to verify discretization
+        print("Set panels:")
+        print("  Wing panel x:", self.wing_panel_x)
+        print("  Wing panel z:", self.wing_panel_z)
+        print("  Flap panel x:", self.flap_panel_x)
+        print("  Flap panel z:", self.flap_panel_z)
 
-    def plot_panels(self) -> None:
+    def plot_panels(self, file_suffix="") -> None:
         plt.figure(figsize=(10, 4))
         # plt.plot(self.geometry.x_lower, self.geometry.z, 'b-', label='Camber Line')
         plt.plot(self.wing_panel_x, self.wing_panel_z, 'ro--', label='Wing Panels')
         plt.plot(self.flap_panel_x, self.flap_panel_z, 'go--', label='Flap Panels')
         plt.xlabel('x (chordwise)')
         plt.ylabel('z (camber)')
-        plt.ylim(-0.1, 0.1)
+        plt.ylim(-0.25, 0.25)
         plt.title('Airfoil Camber Line with Discretized Panels')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"weisingers_approx_panels_naca{self.geometry.naca_code}.png")         
+        plt.savefig(f"weisingers_approx_panels{file_suffix}_naca{self.geometry.naca_code}.png")         
 
     def solve(self) -> dict:
         # Placeholder for Weisinger's Approximation solution method
@@ -59,16 +75,65 @@ class WeisingersApprox(AirfoilModel):
         self.geometry.flap_length_le = float(length_le)
         pass
 
+    # def set
 
-    def orient_panels() -> None:
+
+    def orient_panels(self) -> None:
         """Update panel coordinates for the current alpha if supported.
 
         Subclasses that provide `compute_endpoint_values()` will have this
         method call it to refresh x and y based on the current parameters.
         """
         assert self.geometry.alpha is not None, "Geometry must have alpha set before orienting panels."
-        assert self.geomeetry.delta is not None, "Geometry must have flap deflection set before orienting panels."
+        assert self.geometry.delta is not None, "Geometry must have flap deflection set before orienting panels."
+        alpha = float(self.geometry.alpha['value'])
+        delta = float(self.geometry.delta)
+        p = float(self.geometry.pivot['value'])  # pivot for main wing rotation (e.g., quarter-chord)
+        k = float(self.geometry.k)               # hinge fraction along chord
+        c = float(self.geometry.chord['value'])
 
+        # Rotate main-wing panels about pivot p by alpha
+        wing_rot = [
+            rotate_point((x, z), (p, 0.0), alpha)
+            for x, z in zip(self.wing_panel_x, self.wing_panel_z)
+        ]
+        self.wing_panel_x = np.array([pt[0] for pt in wing_rot], dtype=float)
+        self.wing_panel_z = np.array([pt[1] for pt in wing_rot], dtype=float)
+
+        # Rotate flap panels around pivot point by alpha.
+        flap_rot = [
+            rotate_point((x, z), (p, 0.0), alpha)
+            for x, z in zip(self.flap_panel_x, self.flap_panel_z)
+        ]
+
+        new_hinge = flap_rot[0]  # New hinge location after main wing rotation
+        flap_rot = [
+            rotate_point(point, new_hinge, delta)
+            for point in flap_rot
+        ]
+
+        self.flap_panel_x = np.array([pt[0] for pt in flap_rot], dtype=float)
+        self.flap_panel_z = np.array([pt[1] for pt in flap_rot], dtype=float)
+
+
+        # flap_rot = [
+        #     rotate_point((x, z), (k * c, 0.0), delta)
+        #     for x, z in zip(flap_rot, self.flap_panel_z)
+
+        # # Rotate flap panels about hinge at x = k*c by total angle (alpha + delta)
+        # hinge = (k * c, 0.0)
+        # flap_rot = [
+        #     rotate_point((x, z), hinge, alpha + delta)
+        #     for x, z in zip(self.flap_panel_x, self.flap_panel_z)
+        # ]
+        # self.flap_panel_x = np.array([pt[0] for pt in flap_rot], dtype=float)
+        # self.flap_panel_z = np.array([pt[1] for pt in flap_rot], dtype=float)
+
+        print("Oriented panels:")
+        print("  Wing x:", self.wing_panel_x)
+        print("  Wing z:", self.wing_panel_z)
+        print("  Flap x:", self.flap_panel_x)
+        print("  Flap z:", self.flap_panel_z)
 
 
     def solve_plate(self) -> None:

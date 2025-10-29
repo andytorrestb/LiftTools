@@ -14,7 +14,7 @@ if __name__ == "__main__":
     k = 0.80 # chordwise location of flap hinge
     c = 1.0  # chord length
     alpha = [math.radians(a_deg) for a_deg in np.linspace(-5, 15, 5)]  # angles of attack in radians
-    delta = [math.radians(d_deg) for d_deg in [0, 5, 10, 15]]  # flap deflection angles in radians
+    delta = [math.radians(d_deg) for d_deg in [15, 30, 45, 60]]  # flap deflection angles in radians
     
     # Study 1) NACA 0012 airfoil (main + flap)
     # load from dat --> collapse to camber profile --> rotate for alpha and flap deflection
@@ -38,12 +38,14 @@ if __name__ == "__main__":
     # Discretize and orient panels.
     wa_naca0012.set_panels(n_panels=10)
     wa_naca0012.plot_panels()
-    # wa_naca0012.orient_panels()
+    # Rotate main wing by alpha about pivot and flap by (alpha + delta) about hinge
+    wa_naca0012.orient_panels()
+    # Do NOT re-discretize after orientation; it would overwrite the rotated coordinates
+    wa_naca0012.plot_panels(file_suffix="_oriented")
 
     # Set flow conditions and solve.
     wa_naca0012.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
     results = wa_naca0012.solve()
-
 
 
     print(wa_naca0012.geometry.k)

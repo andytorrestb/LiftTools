@@ -48,15 +48,15 @@ class Airfoil:
         """Set the numeric angle of attack in radians."""
         self.alpha['value'] = float(alpha_rad)
 
-    def orient_to_alpha(self) -> None:
-        """Update geometry coordinates for the current alpha if supported.
+    # def orient_to_alpha(self) -> None:
+    #     """Update geometry coordinates for the current alpha if supported.
 
-        Subclasses that provide `compute_endpoint_values()` will have this
-        method call it to refresh x and y based on the current parameters.
-        """
-        if hasattr(self, 'compute_endpoint_values') and callable(getattr(self, 'compute_endpoint_values')):
-            # type: ignore[attr-defined]
-            self.compute_endpoint_values()  # noqa: F401
+    #     Subclasses that provide `compute_endpoint_values()` will have this
+    #     method call it to refresh x and y based on the current parameters.
+    #     """
+    #     if hasattr(self, 'compute_endpoint_values') and callable(getattr(self, 'compute_endpoint_values')):
+    #         # type: ignore[attr-defined]
+    #         self.compute_endpoint_values()  # noqa: F401
 
     
     def set_flap_properties(self, k: float, delta: float) -> None:
