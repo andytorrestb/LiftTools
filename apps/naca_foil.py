@@ -40,7 +40,6 @@ if __name__ == "__main__":
     wa_naca0012.plot_panels()
     # Rotate main wing by alpha about pivot and flap by (alpha + delta) about hinge
     wa_naca0012.orient_panels()
-    # Do NOT re-discretize after orientation; it would overwrite the rotated coordinates
     wa_naca0012.plot_panels(file_suffix="_oriented")
 
     # Set flow conditions and solve.
@@ -48,11 +47,14 @@ if __name__ == "__main__":
     wa_naca0012.set_points()
     wa_naca0012.plot_points()
     wa_naca0012.compute_distances()
+    wa_naca0012.compute_panel_lengths()
+    wa_naca0012.compute_panel_normals()
     results = wa_naca0012.solve()
 
 
-    print(wa_naca0012.geometry.k)
-    print(wa_naca0012.geometry.delta)
+
+    # print(wa_naca0012.geometry.k)
+    # print(wa_naca0012.geometry.delta)
 
     # Study 2) NACA 0012 airfoil (high resolution case N=100)
     

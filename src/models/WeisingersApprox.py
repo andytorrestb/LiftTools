@@ -128,6 +128,23 @@ class WeisingersApprox(AirfoilModel):
 
         self.R = R
 
+    def compute_panel_lengths(self) -> None:
+        S = np.zeros(self.n_panels)
+        for i in range(self.n_panels - 1):
+            S[i] = math.sqrt((self.total_x[i+1] - self.total_x[i])**2 + (self.total_z[i+1] - self.total_z[i])**2)
+        self.S = S
+
+    def compute_panel_normals(self) -> None:
+        N = np.zeros((self.n_panels, 2))
+        for i in range(self.n_panels - 1):
+            dx = self.total_x[i+1] - self.total_x[i]
+            dz = self.total_z[i+1] - self.total_z[i]
+
+            N[i, :] = np.array([-dz, dx]) / math.sqrt(dx**2 + dz**2)
+        self.N = N
+
+
+
     def plot_points(self) -> None:
         # Placeholder for plotting control points, vortex points, etc.
         plt.figure(figsize=(10, 4))
@@ -146,10 +163,12 @@ class WeisingersApprox(AirfoilModel):
 
         pass
 
-
     def solve(self) -> dict:
         # Placeholder for Weisinger's Approximation solution method
         print("Solving using Weisinger's Approximation...")
+
+        alpha = float(self.geometry.alpha['value'])
+        delta = float(self.geometry.delta)
 
         A = np.zeros((self.n_panels, self.n_panels))
         b = np.zeros(self.n_panels)
@@ -166,15 +185,29 @@ class WeisingersApprox(AirfoilModel):
 
                 A[i, j] = ijk / (2.0 * math.pi * self.R[i, j])
 
-        # Set up right-hand side vector b based on flow tangency conditions.
+        # Set flow velocity for wing and flap panels.
+        U_inf = np.zeros((self.n_panels, 2))
         for i in range(self.n_panels):
-            alpha = float(self.geometry.alpha['value'])
-
             if i < self.n_wing_panels:
-                b[i] = (math.sin(-alpha) * self.U_inf)
+                U_inf[i] = (math.cos(alpha) * self.U_inf, math.sin(-alpha) * self.U_inf)
             else:
                 delta = float(self.geometry.delta)
-                b[i] = (math.sin(-1*(alpha + delta)) * self.U_inf)
+                U_inf[i] = (math.cos(-(alpha + delta)) * self.U_inf, math.sin(-1*(alpha + delta)) * self.U_inf)
+        
+        
+        # Set up right-hand side vector b based on flow tangency conditions.
+        for i in range(self.n_panels):
+            b[i] = -np.dot(U_inf[i, :], self.N[i, :])
+
+        # # B vector
+        # for i in range(self.n_panels):
+        #     alpha = float(self.geometry.alpha['value'])
+
+        #     if i < self.n_wing_panels:
+        #         b[i] = (math.sin(-alpha) * self.U_inf)
+        #     else:
+        #         delta = float(self.geometry.delta)
+        #         b[i] = (math.sin(-1*(alpha + delta)) * self.U_inf)
 
         # Solve for vortex strengths G
         G = np.linalg.solve(A, b)
@@ -193,15 +226,11 @@ class WeisingersApprox(AirfoilModel):
         print("Weisinger's Approximation results:", results)
         return results
 
-        pass
-
     def set_flap(self, deflection_rad: float, length_le: float) -> None:
         # Placeholder for setting flap deflection specific to Weisinger's Approximation
         self.geometry.flap_deflection_rad = float(deflection_rad)
         self.geometry.flap_length_le = float(length_le)
         pass
-
-    # def set
 
 
     def orient_panels(self) -> None:
@@ -241,26 +270,14 @@ class WeisingersApprox(AirfoilModel):
         self.flap_panel_x = np.array([pt[0] for pt in flap_rot], dtype=float)
         self.flap_panel_z = np.array([pt[1] for pt in flap_rot], dtype=float)
 
+        wing_panel_z = self.wing_panel_z[:-1]
+        wing_panel_x = self.wing_panel_x[:-1]
 
-        # flap_rot = [
-        #     rotate_point((x, z), (k * c, 0.0), delta)
-        #     for x, z in zip(flap_rot, self.flap_panel_z)
+        total_z = np.array(wing_panel_z.tolist() + self.flap_panel_z.tolist())
+        total_x = np.array(wing_panel_x.tolist() + self.flap_panel_x.tolist())
 
-        # # Rotate flap panels about hinge at x = k*c by total angle (alpha + delta)
-        # hinge = (k * c, 0.0)
-        # flap_rot = [
-        #     rotate_point((x, z), hinge, alpha + delta)
-        #     for x, z in zip(self.flap_panel_x, self.flap_panel_z)
-        # ]
-        # self.flap_panel_x = np.array([pt[0] for pt in flap_rot], dtype=float)
-        # self.flap_panel_z = np.array([pt[1] for pt in flap_rot], dtype=float)
-
-        print("Oriented panels:")
-        print("  Wing x:", self.wing_panel_x)
-        print("  Wing z:", self.wing_panel_z)
-        print("  Flap x:", self.flap_panel_x)
-        print("  Flap z:", self.flap_panel_z)
-
+        self.total_x = total_x
+        self.total_z = total_z
 
     def solve_plate(self) -> None:
         # Placeholder for setting control points specific to Weisinger's Approximation
