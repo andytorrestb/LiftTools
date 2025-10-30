@@ -116,14 +116,17 @@ class WeisingersApprox(AirfoilModel):
         print("  Vortex points QC:", self.QC)
         print("  Tangency points TC:", self.TC)
 
+    def compute_distances(self) -> None:
         # Calculate distances Rij from each vortex point to each control point
         R = np.zeros((len(self.QC), len(self.TC)))
-        for i in range(len(QC)):
-            for j in range(len(TC)):
-                dx = QC[i][0] - TC[j][0]
-                dz = QC[i][1] - TC[j][1]
+        for i in range(len(self.QC)):
+            for j in range(len(self.TC)):
+                dx = self.QC[i][0] - self.TC[j][0]
+                dz = self.QC[i][1] - self.TC[j][1]
                 R_ij = math.sqrt(dx**2 + dz**2)
                 R[i, j] = R_ij
+
+        self.R = R
 
 
 
