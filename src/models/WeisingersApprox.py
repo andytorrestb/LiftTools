@@ -199,29 +199,25 @@ class WeisingersApprox(AirfoilModel):
         for i in range(self.n_panels):
             b[i] = -np.dot(U_inf[i, :], self.N[i, :])
 
-        # # B vector
-        # for i in range(self.n_panels):
-        #     alpha = float(self.geometry.alpha['value'])
-
-        #     if i < self.n_wing_panels:
-        #         b[i] = (math.sin(-alpha) * self.U_inf)
-        #     else:
-        #         delta = float(self.geometry.delta)
-        #         b[i] = (math.sin(-1*(alpha + delta)) * self.U_inf)
-
         # Solve for vortex strengths G
         G = np.linalg.solve(A, b)
         print("Solved vortex strengths G:", G)
         L = self.rho_inf * self.U_inf * np.sum(G)
+        M_cg = 0
+
+        for i in range(self.n_panels):
+            r_x = self.C[i, 0] - (self.geometry.pivot['value'] * self.geometry.chord['value'])
+            M_cg += self.rho_inf * self.U_inf * G[i] * r_x
+        
         c = self.geometry.chord['value']
         cl = L / (0.5 * self.rho_inf * self.U_inf**2 * c)
-        cd = 0.0  # Placeholder for drag coefficient calculation
-        cm_0cg = 0.0  # Placeholder for moment coefficient calculation
+        cd = 0.0  # Cd is zero for TAT
+        cm_cg = M_cg / (0.5 * self.rho_inf * self.U_inf**2 * c**2)
         results = {
             'L': L,
             'cl': cl,
             'cd': cd,
-            'cm_0cg': cm_0cg
+            'cm_cg': cm_cg
         }
         print("Weisinger's Approximation results:", results)
         return results
