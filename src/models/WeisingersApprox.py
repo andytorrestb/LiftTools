@@ -23,6 +23,7 @@ def rotate_point(point: tuple[float, float], pivot: tuple[float, float], theta: 
 class WeisingersApprox(AirfoilModel):
     def set_panels(self, n_panels: int) -> None:
         assert self.geometry.z is not None, "Camber line must be set before discretizing."
+        self.n_panels = n_panels
         # establish local name references for important data.
         z = self.geometry.z
         c = self.geometry.chord['value']
@@ -31,6 +32,8 @@ class WeisingersApprox(AirfoilModel):
         # Determine number of panels on main wing and flap
         n_wing_panels = int(k*(n_panels+1))
         n_flap_panels = n_panels - n_wing_panels
+        self.n_wing_panels = n_wing_panels
+        self.n_flap_panels = n_flap_panels
 
         # Discretize and interpolate panels on main wing and flap
         wing_panel_x = np.linspace(0, k*c, n_wing_panels)
@@ -67,31 +70,62 @@ class WeisingersApprox(AirfoilModel):
     def set_points(self) -> None:
         # Placeholder for setting control points specific to Weisinger's Approximation
         # Set arrays for various points needed in WA calculations.
-        C = np.array([])  # Control points (midpoint of panel endpoints)
-        QC = np.array([])  # Vortex source points (quarter-chord locations)
-        TC = np.array([])  # Tangency condition points (three-quarter-chord locations)
-        R = np.array([])  # Distance from vortex to control points (Rij)
-        N = np.array([])  # Normal vectors for each panel.
+        N = self.n_panels
+        C = np.zeros((N, 2))  # Control points (midpoint of panel endpoints)
+        QC = np.zeros((N, 2))  # Vortex source points (quarter-chord locations)
+        TC = np.zeros((N, 2))  # Tangency condition points (three-quarter-chord locations)
 
         # Add points for wing panels
         for i in range(len(self.wing_panel_x) - 1):
-            C = np.append(C, ( (self.wing_panel_x[i] + self.wing_panel_x[i+1]) / 2.0,
-                               (self.wing_panel_z[i] + self.wing_panel_z[i+1]) / 2.0 ))
-            QC = np.append(QC, ( self.wing_panel_x[i] + 0.25 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
-                                 self.wing_panel_z[i] + 0.25 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ))
-            TC = np.append(TC, ( self.wing_panel_x[i] + 0.75 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
-                                 self.wing_panel_z[i] + 0.75 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ))
+            C_i = np.array([(self.wing_panel_x[i] + self.wing_panel_x[i+1]) / 2.0,
+                    (self.wing_panel_z[i] + self.wing_panel_z[i+1]) / 2.0 ])
+            C[i, :] = C_i
+
+            Q_i = np.array([ self.wing_panel_x[i] + 0.25 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
+                             self.wing_panel_z[i] + 0.25 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ])
+            QC[i, :] = Q_i
+
+            T_i = np.array([ self.wing_panel_x[i] + 0.75 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
+                             self.wing_panel_z[i] + 0.75 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ])
+            TC[i, :] = T_i
+
+        # Add points for flap panels
+        k = self.geometry.k
+        c = self.geometry.chord['value']
+        for i in range(self.n_wing_panels - 1, self.n_panels):
+            print(i)
+            j = i - self.n_wing_panels  # index for flap panels
+            C_i = np.array([(self.flap_panel_x[j] + self.flap_panel_x[j+1]) / 2.0,
+                            (self.flap_panel_z[j] + self.flap_panel_z[j+1]) / 2.0 ])
+            C[i, :] = C_i
             
-        for i in range(len(self.flap_panel_x) - 1):
-            C = np.append(C, ( (self.flap_panel_x[i] + self.flap_panel_x[i+1]) / 2.0,
-                               (self.flap_panel_z[i] + self.flap_panel_z[i+1]) / 2.0 ))
-            QC = np.append(QC, ( self.flap_panel_x[i] + 0.25 * (self.flap_panel_x[i+1] - self.flap_panel_x[i]),
-                                 self.flap_panel_z[i] + 0.25 * (self.flap_panel_z[i+1] - self.flap_panel_z[i]) ))
-            TC = np.append(TC, ( self.flap_panel_x[i] + 0.75 * (self.flap_panel_x[i+1] - self.flap_panel_x[i]),
-                                 self.flap_panel_z[i] + 0.75 * (self.flap_panel_z[i+1] - self.flap_panel_z[i]) ))
+            Q_i = np.array([ self.flap_panel_x[j] + 0.25 * (self.flap_panel_x[j+1] - self.flap_panel_x[j]),
+                             self.flap_panel_z[j] + 0.25 * (self.flap_panel_z[j+1] - self.flap_panel_z[j]) ])
+            QC[i, :] = Q_i
+
+            T_i = np.array([ self.flap_panel_x[j] + 0.75 * (self.flap_panel_x[j+1] - self.flap_panel_x[j]),
+                             self.flap_panel_z[j] + 0.75 * (self.flap_panel_z[j+1] - self.flap_panel_z[j]) ])
+            TC[i, :] = T_i
+        
         self.C = C
         self.QC = QC
         self.TC = TC
+        print("Set points:")
+        print("  Control points C:", self.C)
+        print(self.C.shape)
+        print("  Vortex points QC:", self.QC)
+        print("  Tangency points TC:", self.TC)
+
+        # Calculate distances Rij from each vortex point to each control point
+        R = np.zeros((len(self.QC), len(self.TC)))
+        for i in range(len(QC)):
+            for j in range(len(TC)):
+                dx = QC[i][0] - TC[j][0]
+                dz = QC[i][1] - TC[j][1]
+                R_ij = math.sqrt(dx**2 + dz**2)
+                R[i, j] = R_ij
+
+
 
     def plot_points(self) -> None:
         # Placeholder for plotting control points, vortex points, etc.
