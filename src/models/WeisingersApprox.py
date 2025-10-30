@@ -128,8 +128,6 @@ class WeisingersApprox(AirfoilModel):
 
         self.R = R
 
-
-
     def plot_points(self) -> None:
         # Placeholder for plotting control points, vortex points, etc.
         plt.figure(figsize=(10, 4))
@@ -146,7 +144,6 @@ class WeisingersApprox(AirfoilModel):
         plt.grid(True)
         plt.savefig(f"weisingers_approx_points_naca{self.geometry.naca_code}.png")
 
-
         pass
 
 
@@ -154,9 +151,47 @@ class WeisingersApprox(AirfoilModel):
         # Placeholder for Weisinger's Approximation solution method
         print("Solving using Weisinger's Approximation...")
 
+        A = np.zeros((self.n_panels, self.n_panels))
+        b = np.zeros(self.n_panels)
 
+        for i in range(self.n_panels): # Vortex sourcce points (QC).
+            for j in range(self.n_panels): # Flow tangency points (TC).
+                # Handles sign based on direction of induced velocity.
+                # Downstream influence is positive, upstream is negative.
+                # This is a consequence of CW-positive vortex rotation.
+                if j < i: # TC is upstream of QC 
+                    ijk = 1
+                else: # TC is downstream of QC
+                    ijk = -1
 
+                A[i, j] = ijk / (2.0 * math.pi * self.R[i, j])
 
+        # Set up right-hand side vector b based on flow tangency conditions.
+        for i in range(self.n_panels):
+            alpha = float(self.geometry.alpha['value'])
+
+            if i < self.n_wing_panels:
+                b[i] = (math.sin(-alpha) * self.U_inf)
+            else:
+                delta = float(self.geometry.delta)
+                b[i] = (math.sin(-1*(alpha + delta)) * self.U_inf)
+
+        # Solve for vortex strengths G
+        G = np.linalg.solve(A, b)
+        print("Solved vortex strengths G:", G)
+        L = self.rho_inf * self.U_inf * np.sum(G)
+        c = self.geometry.chord['value']
+        cl = L / (0.5 * self.rho_inf * self.U_inf**2 * c)
+        cd = 0.0  # Placeholder for drag coefficient calculation
+        cm_0cg = 0.0  # Placeholder for moment coefficient calculation
+        results = {
+            'L': L,
+            'cl': cl,
+            'cd': cd,
+            'cm_0cg': cm_0cg
+        }
+        print("Weisinger's Approximation results:", results)
+        return results
 
         pass
 
