@@ -45,6 +45,8 @@ if __name__ == "__main__":
 
     # Set flow conditions and solve.
     wa_naca0012.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
+    wa_naca0012.set_points()
+    wa_naca0012.plot_points()
     results = wa_naca0012.solve()
 
 

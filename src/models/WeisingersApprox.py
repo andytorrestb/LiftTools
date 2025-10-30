@@ -64,9 +64,63 @@ class WeisingersApprox(AirfoilModel):
         plt.grid(True)
         plt.savefig(f"weisingers_approx_panels{file_suffix}_naca{self.geometry.naca_code}.png")         
 
+    def set_points(self) -> None:
+        # Placeholder for setting control points specific to Weisinger's Approximation
+        # Set arrays for various points needed in WA calculations.
+        C = np.array([])  # Control points (midpoint of panel endpoints)
+        QC = np.array([])  # Vortex source points (quarter-chord locations)
+        TC = np.array([])  # Tangency condition points (three-quarter-chord locations)
+        R = np.array([])  # Distance from vortex to control points (Rij)
+        N = np.array([])  # Normal vectors for each panel.
+
+        # Add points for wing panels
+        for i in range(len(self.wing_panel_x) - 1):
+            C = np.append(C, ( (self.wing_panel_x[i] + self.wing_panel_x[i+1]) / 2.0,
+                               (self.wing_panel_z[i] + self.wing_panel_z[i+1]) / 2.0 ))
+            QC = np.append(QC, ( self.wing_panel_x[i] + 0.25 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
+                                 self.wing_panel_z[i] + 0.25 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ))
+            TC = np.append(TC, ( self.wing_panel_x[i] + 0.75 * (self.wing_panel_x[i+1] - self.wing_panel_x[i]),
+                                 self.wing_panel_z[i] + 0.75 * (self.wing_panel_z[i+1] - self.wing_panel_z[i]) ))
+            
+        for i in range(len(self.flap_panel_x) - 1):
+            C = np.append(C, ( (self.flap_panel_x[i] + self.flap_panel_x[i+1]) / 2.0,
+                               (self.flap_panel_z[i] + self.flap_panel_z[i+1]) / 2.0 ))
+            QC = np.append(QC, ( self.flap_panel_x[i] + 0.25 * (self.flap_panel_x[i+1] - self.flap_panel_x[i]),
+                                 self.flap_panel_z[i] + 0.25 * (self.flap_panel_z[i+1] - self.flap_panel_z[i]) ))
+            TC = np.append(TC, ( self.flap_panel_x[i] + 0.75 * (self.flap_panel_x[i+1] - self.flap_panel_x[i]),
+                                 self.flap_panel_z[i] + 0.75 * (self.flap_panel_z[i+1] - self.flap_panel_z[i]) ))
+        self.C = C
+        self.QC = QC
+        self.TC = TC
+
+    def plot_points(self) -> None:
+        # Placeholder for plotting control points, vortex points, etc.
+        plt.figure(figsize=(10, 4))
+        plt.plot(self.wing_panel_x, self.wing_panel_z, 'ro--', label='Wing Panels')
+        plt.plot(self.flap_panel_x, self.flap_panel_z, 'go--', label='Flap Panels')
+        plt.plot(self.C[::2], self.C[1::2], 'kx', label='Control Points C')
+        plt.plot(self.QC[::2], self.QC[1::2], 'm+', label='Vortex Points QC')
+        plt.plot(self.TC[::2], self.TC[1::2], 'cs', label='Tangency Points TC')
+        plt.xlabel('x (chordwise)')
+        plt.ylabel('z (camber)')
+        plt.ylim(-0.25, 0.25)
+        plt.title('Airfoil Camber Line with Panels and Control Points')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f"weisingers_approx_points_naca{self.geometry.naca_code}.png")
+
+
+        pass
+
+
     def solve(self) -> dict:
         # Placeholder for Weisinger's Approximation solution method
         print("Solving using Weisinger's Approximation...")
+
+
+
+
+
         pass
 
     def set_flap(self, deflection_rad: float, length_le: float) -> None:
