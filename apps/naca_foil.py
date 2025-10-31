@@ -3,6 +3,7 @@ import apps_header
 import math
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from geometry import NACA
 from models import WeisingersApprox as wa
@@ -25,36 +26,54 @@ if __name__ == "__main__":
     naca0012.set_camber()
     naca0012.plot_airfoil()
 
-    # Initialize Weisinger's Approximation model.
-    wa_naca0012 = wa.WeisingersApprox(geometry=naca0012)
+    Cl = []
+    Cm_cg = []
+    for a in alpha:
+        # Initialize Weisinger's Approximation model.
+        wa_naca0012 = wa.WeisingersApprox(geometry=naca0012)
 
-    # Set flap and attack angles. Rotate camberline accordingly.
-    wa_naca0012.geometry.set_alpha(alpha[2])  # e.g., 5 degrees
-    wa_naca0012.geometry.set_flap_properties(
-        k=k,
-        delta=delta[2]  # e.g., 10 degrees
-    )
+        # Set flap and attack angles. Rotate camberline accordingly.
+        wa_naca0012.geometry.set_alpha(a)  # e.g., 5 degrees
+        wa_naca0012.geometry.set_flap_properties(
+            k=k,
+            delta=delta[0]  # e.g., 10 degrees
+        )
 
-    # Discretize and orient panels.
-    wa_naca0012.set_panels(n_panels=10)
-    wa_naca0012.plot_panels()
-    # Rotate main wing by alpha about pivot and flap by (alpha + delta) about hinge
-    wa_naca0012.orient_panels()
-    wa_naca0012.plot_panels(file_suffix="_oriented")
+        # Discretize and orient panels.
+        wa_naca0012.set_panels(n_panels=10)
+        wa_naca0012.plot_panels()
+        # Rotate main wing by alpha about pivot and flap by (alpha + delta) about hinge
+        wa_naca0012.orient_panels()
+        wa_naca0012.plot_panels(file_suffix="_oriented")
 
-    # Set flow conditions and solve.
-    wa_naca0012.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
-    wa_naca0012.set_points()
-    wa_naca0012.plot_points()
-    wa_naca0012.compute_distances()
-    wa_naca0012.compute_panel_lengths()
-    wa_naca0012.compute_panel_normals()
-    results = wa_naca0012.solve()
+        # Set flow conditions and solve.
+        wa_naca0012.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
+        wa_naca0012.set_points()
+        wa_naca0012.plot_points()
+        wa_naca0012.compute_distances()
+        wa_naca0012.compute_panel_lengths()
+        wa_naca0012.compute_panel_normals()
+        results = wa_naca0012.solve()
+        Cl.append(results["cl"])
+        Cm_cg.append(results["cm_cg"])
 
-
-
-    # print(wa_naca0012.geometry.k)
-    # print(wa_naca0012.geometry.delta)
+    # Plot results.
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot([math.degrees(a) for a in alpha], Cl, marker='o')
+    plt.title("Lift Coefficient vs Angle of Attack")
+    plt.xlabel("Angle of Attack (degrees)")
+    plt.ylabel("Lift Coefficient (Cl)")
+    plt.grid()
+    plt.subplot(1, 2, 2)
+    plt.plot([math.degrees(a) for a in alpha], Cm_cg, marker='o')
+    plt.title("Moment Coefficient about CG vs Angle of Attack")
+    plt.xlabel("Angle of Attack (degrees)")
+    plt.ylabel("Moment Coefficient (Cm_cg)")
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(f"weisingers_approx_results_naca{naca0012.naca_code}.png")
+    plt.clf()
 
     # Study 2) NACA 0012 airfoil (high resolution case N=100)
     

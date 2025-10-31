@@ -171,32 +171,36 @@ class WeisingersApprox(AirfoilModel):
         # Placeholder for Weisinger's Approximation solution method
         print("Solving using Weisinger's Approximation...")
 
+        # Geometry has already been rotated to alpha/delta in orient_panels().
+        # Therefore, keep the freestream aligned with the x-axis here.
         alpha = float(self.geometry.alpha['value'])
         delta = float(self.geometry.delta)
 
         A = np.zeros((self.n_panels, self.n_panels))
         b = np.zeros(self.n_panels)
 
-        for i in range(self.n_panels): # Vortex sourcce points (QC).
-            for j in range(self.n_panels): # Flow tangency points (TC).
-                # Handles sign based on direction of induced velocity.
-                # Downstream influence is positive, upstream is negative.
-                # This is a consequence of CW-positive vortex rotation.
-                if j < i: # TC is upstream of QC 
-                    ijk = 1
-                else: # TC is downstream of QC
-                    ijk = -1
+        # Build influence matrix A so that rows correspond to control/tangency
+        # points (TC) and columns correspond to vortex/source points (QC).
+        # self.R was built as R[q, t] = distance from QC[q] to TC[t].
+        for i in range(self.n_panels):  # row: TC index
+            for j in range(self.n_panels):  # col: QC index
+                # WA sign convention: a vortex induces opposite-signed normal
+                # velocity downstream vs upstream. Using panel index order as a
+                # proxy for streamwise direction along the camber line.
+                if i < j:  # TC upstream of QC
+                    ijk = 1.0
+                else:      # TC downstream of QC
+                    ijk = -1.0
 
-                A[i, j] = ijk / (2.0 * math.pi * self.R[i, j])
+                # Use distance from QC[j] to TC[i]
+                A[i, j] = ijk / (2.0 * math.pi * self.R[j, i])
 
         # Set flow velocity for wing and flap panels.
+        # Use a single, global freestream vector. Geometry has already been
+        # oriented by alpha/delta, so do NOT rotate the freestream again.
         U_inf = np.zeros((self.n_panels, 2))
         for i in range(self.n_panels):
-            if i < self.n_wing_panels:
-                U_inf[i] = (math.cos(alpha) * self.U_inf, math.sin(-alpha) * self.U_inf)
-            else:
-                delta = float(self.geometry.delta)
-                U_inf[i] = (math.cos(-(alpha + delta)) * self.U_inf, math.sin(-1*(alpha + delta)) * self.U_inf)
+            U_inf[i] = (self.U_inf, 0.0)
         
         
         # Set up right-hand side vector b based on flow tangency conditions.
@@ -210,7 +214,8 @@ class WeisingersApprox(AirfoilModel):
         M_cg = 0
 
         for i in range(self.n_panels):
-            r_x = self.C[i, 0] - (self.geometry.pivot['value'] * self.geometry.chord['value'])
+            # pivot['value'] is already an absolute x-location (in chord units)
+            r_x = self.C[i, 0] - (self.geometry.pivot['value'])
             M_cg += self.rho_inf * self.U_inf * G[i] * r_x
         
         c = self.geometry.chord['value']
