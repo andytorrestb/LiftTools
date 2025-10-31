@@ -27,7 +27,9 @@ if __name__ == "__main__":
     naca0012.plot_airfoil()
 
     Cl = []
+    Cl_TAT = []
     Cm_cg = []
+    Cm_cg_TAT = []
     for a in alpha:
         # Initialize Weisinger's Approximation model.
         wa_naca0012 = wa.WeisingersApprox(geometry=naca0012)
@@ -57,26 +59,68 @@ if __name__ == "__main__":
         Cl.append(results["cl"])
         Cm_cg.append(results["cm_cg"])
 
+        Cl_TAT.append(2 * math.pi * a)
+        Cm_cg_TAT.append(0.0)
+
+
     # Plot results.
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
-    plt.plot([math.degrees(a) for a in alpha], Cl, marker='o')
+    plt.plot([math.degrees(a) for a in alpha], Cl, marker='o', label="Weisinger's Approximation")
+    plt.plot([math.degrees(a) for a in alpha], Cl_TAT, marker='x', label="Thin Airfoil Theory")
     plt.title("Lift Coefficient vs Angle of Attack")
     plt.xlabel("Angle of Attack (degrees)")
     plt.ylabel("Lift Coefficient (Cl)")
     plt.grid()
+    plt.tight_layout()
+    plt.legend()
     plt.subplot(1, 2, 2)
-    plt.plot([math.degrees(a) for a in alpha], Cm_cg, marker='o')
+    plt.plot([math.degrees(a) for a in alpha], Cm_cg, marker='o', label="Weisinger's Approximation")
+    plt.plot([math.degrees(a) for a in alpha], Cm_cg_TAT, marker='x', label="Thin Airfoil Theory")
     plt.title("Moment Coefficient about CG vs Angle of Attack")
     plt.xlabel("Angle of Attack (degrees)")
     plt.ylabel("Moment Coefficient (Cm_cg)")
     plt.grid()
     plt.tight_layout()
+    plt.legend()
     plt.savefig(f"weisingers_approx_results_naca{naca0012.naca_code}.png")
     plt.clf()
 
     # Study 2) NACA 0012 airfoil (high resolution case N=100)
-    
+    wa_naca0012_highres = wa.WeisingersApprox(geometry=naca0012)
+    wa_naca0012_highres.geometry.set_alpha(alpha[2])  # e.g., 5 degrees
+    wa_naca0012_highres.geometry.set_flap_properties(
+        k=k,
+        delta=delta[0]  # e.g., 10 degrees
+    )
+    wa_naca0012_highres.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
+    wa_naca0012_highres.set_panels(n_panels=100)
+    wa_naca0012_highres.orient_panels()
+    wa_naca0012_highres.set_points()
+    wa_naca0012_highres.compute_distances()
+    wa_naca0012_highres.compute_panel_lengths()
+    wa_naca0012_highres.compute_panel_normals()
+    results_highres = wa_naca0012_highres.solve()
+
+    print(f"High resolution case (N=100) for NACA {naca0012.naca_code}:")
+    print(f"Lift Coefficient (Cl): {results_highres['cl']:.4f}")
+    print(f"Moment Coefficient about CG (Cm_cg): {results_highres['cm_cg']:.4f}")
+
+    G = results_highres['G']
+    # print(f"Circulation (G): {G:.4f} m^2/s")
+    n_panels = np.linspace(0, 1, wa_naca0012_highres.n_panels)
+    # Plot high resolution results.
+    plt.figure(figsize=(10, 5))
+    plt.plot(n_panels, G, marker='o', label="Circulation (G)")
+    plt.xlabel("Panel Index")
+    plt.ylabel("Circulation (m^2/s)")
+    plt.title(f"Circulation Distribution for NACA {naca0012.naca_code} (N=100)")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(f"weisingers_approx_circulation_naca{naca0012.naca_code}.png")
+    plt.clf()
+
     # Study 3) NACA 2412 airfoil (low resolution)
     naca2412 = NACA.NACA(naca_code="2412")
     naca2412.read_dat_file("../data/NACA2412.dat")

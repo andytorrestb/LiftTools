@@ -226,7 +226,8 @@ class WeisingersApprox(AirfoilModel):
             'L': L,
             'cl': cl,
             'cd': cd,
-            'cm_cg': cm_cg
+            'cm_cg': cm_cg,
+            'G': G
         }
         print("Weisinger's Approximation results:", results)
         return results
