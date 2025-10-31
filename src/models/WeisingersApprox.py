@@ -23,23 +23,27 @@ def rotate_point(point: tuple[float, float], pivot: tuple[float, float], theta: 
 class WeisingersApprox(AirfoilModel):
     def set_panels(self, n_panels: int) -> None:
         assert self.geometry.z is not None, "Camber line must be set before discretizing."
-        self.n_panels = n_panels
+        # Target total number of panels (segments)
+        self.n_panels = int(n_panels)
         # establish local name references for important data.
         z = self.geometry.z
         c = self.geometry.chord['value']
         k = self.geometry.k
 
         # Determine number of panels on main wing and flap
-        n_wing_panels = int(k*(n_panels+1))
-        n_flap_panels = n_panels - n_wing_panels
+        # Use a clean partition so that:
+        #   total_panels = n_wing_panels + n_flap_panels == self.n_panels
+        n_wing_panels = int(round(k * self.n_panels))
+        n_flap_panels = self.n_panels - n_wing_panels
         self.n_wing_panels = n_wing_panels
         self.n_flap_panels = n_flap_panels
 
         # Discretize and interpolate panels on main wing and flap
-        wing_panel_x = np.linspace(0, k*c, n_wing_panels)
+        # We create N_panels + 1 points to define N_panels segments.
+        wing_panel_x = np.linspace(0, k*c, n_wing_panels + 1)
         wing_panel_z = np.interp(wing_panel_x, self.geometry.x_lower, z)
 
-        flap_panel_x = np.linspace(k*c, c, n_flap_panels+1)
+        flap_panel_x = np.linspace(k*c, c, n_flap_panels + 1)
         flap_panel_z = np.interp(flap_panel_x, self.geometry.x_lower, z)
 
         # Set to object properties for later use.
@@ -75,8 +79,8 @@ class WeisingersApprox(AirfoilModel):
         QC = np.zeros((N, 2))  # Vortex source points (quarter-chord locations)
         TC = np.zeros((N, 2))  # Tangency condition points (three-quarter-chord locations)
 
-        # Add points for wing panels
-        for i in range(len(self.wing_panel_x) - 1):
+        # Add points for wing panels (indices reference segment i between i and i+1)
+        for i in range(self.n_wing_panels):
             C_i = np.array([(self.wing_panel_x[i] + self.wing_panel_x[i+1]) / 2.0,
                     (self.wing_panel_z[i] + self.wing_panel_z[i+1]) / 2.0 ])
             C[i, :] = C_i
@@ -92,9 +96,8 @@ class WeisingersApprox(AirfoilModel):
         # Add points for flap panels
         k = self.geometry.k
         c = self.geometry.chord['value']
-        for i in range(self.n_wing_panels - 1, self.n_panels):
-            print(i)
-            j = i - self.n_wing_panels  # index for flap panels
+        for i in range(self.n_wing_panels, self.n_panels):
+            j = i - self.n_wing_panels  # index within flap segments
             C_i = np.array([(self.flap_panel_x[j] + self.flap_panel_x[j+1]) / 2.0,
                             (self.flap_panel_z[j] + self.flap_panel_z[j+1]) / 2.0 ])
             C[i, :] = C_i
@@ -129,14 +132,15 @@ class WeisingersApprox(AirfoilModel):
         self.R = R
 
     def compute_panel_lengths(self) -> None:
+        # There are self.n_panels segments defined by self.total_x/z (which have N+1 points)
         S = np.zeros(self.n_panels)
-        for i in range(self.n_panels - 1):
+        for i in range(self.n_panels):
             S[i] = math.sqrt((self.total_x[i+1] - self.total_x[i])**2 + (self.total_z[i+1] - self.total_z[i])**2)
         self.S = S
 
     def compute_panel_normals(self) -> None:
         N = np.zeros((self.n_panels, 2))
-        for i in range(self.n_panels - 1):
+        for i in range(self.n_panels):
             dx = self.total_x[i+1] - self.total_x[i]
             dz = self.total_z[i+1] - self.total_z[i]
 
@@ -150,9 +154,9 @@ class WeisingersApprox(AirfoilModel):
         plt.figure(figsize=(10, 4))
         plt.plot(self.wing_panel_x, self.wing_panel_z, 'ro--', label='Wing Panels')
         plt.plot(self.flap_panel_x, self.flap_panel_z, 'go--', label='Flap Panels')
-        plt.plot(self.C[::2], self.C[1::2], 'kx', label='Control Points C')
-        plt.plot(self.QC[::2], self.QC[1::2], 'm+', label='Vortex Points QC')
-        plt.plot(self.TC[::2], self.TC[1::2], 'cs', label='Tangency Points TC')
+        plt.plot(self.C[:, 0], self.C[:, 1], 'kx', label='Control Points C')
+        plt.plot(self.QC[:, 0], self.QC[:, 1], 'm+', label='Vortex Points QC')
+        plt.plot(self.TC[:, 0], self.TC[:, 1], 'cs', label='Tangency Points TC')
         plt.xlabel('x (chordwise)')
         plt.ylabel('z (camber)')
         plt.ylim(-0.25, 0.25)
