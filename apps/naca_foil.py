@@ -62,7 +62,6 @@ if __name__ == "__main__":
         Cl_TAT.append(2 * math.pi * a)
         Cm_cg_TAT.append(0.0)
 
-
     # Plot results.
     plt.figure(figsize=(10, 5))
     plt.subplot(1, 2, 1)
@@ -127,15 +126,62 @@ if __name__ == "__main__":
     naca2412.set_camber()
     naca2412.plot_airfoil()
 
-    wa_naca2412 = wa.WeisingersApprox(geometry=naca2412)
-    wa_naca2412.geometry.set_flap_properties(
-        k=k,
-        delta=delta[2]  # e.g., 10 degrees
-    )
-    wa_naca2412.geometry.set_alpha(alpha[2])  # e.g., 5 degrees 
-    wa_naca2412.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
-    wa_naca2412.set_panels(n_panels=10)
-    wa_naca2412.plot_panels()
+    Cl_2412 = []
+    Cm_cg_2412 = []
+
+    Cl_TAT_2412 = []
+    Cm_cg_TAT_2412 = []
+
+    for a in alpha:
+        wa_naca2412 = wa.WeisingersApprox(geometry=naca2412)
+        wa_naca2412.geometry.set_flap_properties(
+            k=k,
+            delta=delta[2]  # e.g., 10 degrees
+        )
+        wa_naca2412.geometry.set_alpha(a)  # e.g., 5 degrees 
+        wa_naca2412.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
+        wa_naca2412.set_panels(n_panels=10)
+        wa_naca2412.plot_panels()
+
+        wa_naca2412.orient_panels()
+        wa_naca2412.plot_panels(file_suffix="_oriented")
+
+        # Set flow conditions and solve.
+        wa_naca2412.set_flow_conditions(U_inf=U_inf, rho_inf=rho_inf)
+        wa_naca2412.set_points()
+        wa_naca2412.plot_points()
+        wa_naca2412.compute_distances()
+        wa_naca2412.compute_panel_lengths()
+        wa_naca2412.compute_panel_normals()
+        results = wa_naca2412.solve()
+
+        Cl_2412.append(results["cl"])
+        Cm_cg_2412.append(results["cm_cg"])
+        Cl_TAT_2412.append(2 * math.pi * a)
+        Cm_cg_TAT_2412.append(0.0)
+
+    # Plot results for NACA 2412.
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot([math.degrees(a) for a in alpha], Cl_2412, marker='o', label="Weisinger's Approximation")
+    plt.plot([math.degrees(a) for a in alpha], Cl_TAT_2412, marker='x', label="Thin Airfoil Theory")
+    plt.title("Lift Coefficient vs Angle of Attack for NACA 2412")
+    plt.xlabel("Angle of Attack (degrees)")
+    plt.ylabel("Lift Coefficient (Cl)") 
+    plt.grid()
+    plt.tight_layout()
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot([math.degrees(a) for a in alpha], Cm_cg_2412, marker='o', label="Weisinger's Approximation")
+    plt.plot([math.degrees(a) for a in alpha], Cm_cg_TAT_2412, marker='x', label="Thin Airfoil Theory")
+    plt.title("Moment Coefficient about CG vs Angle of Attack for NACA 2412")
+    plt.xlabel("Angle of Attack (degrees)")
+    plt.ylabel("Moment Coefficient (Cm_cg)")
+    plt.grid()
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig(f"weisingers_approx_results_naca{naca2412.naca_code}.png")
+    plt.clf()
 
 
 
