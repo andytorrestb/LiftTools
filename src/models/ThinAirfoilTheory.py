@@ -1,45 +1,34 @@
 import math
 
-import sympy as sp
+import numpy as np
 
 from models.AirFoilModel import AirfoilModel
+from models.WeisingersApprox import WeisingersApprox
 
 class ThinAirfoilTheory(AirfoilModel):
+    def set_naca_camber(self) -> None:
+        assert self.geometry is not None, "Geometry must be set before setting camber."
+        assert self.geometry.z is not None, "Geometry must have a camber line defined."
+        self.c = self.geometry.chord['value']
+        self.x =np.linspace(0, self.c, num=100)
+        self.z = np.interp(self.x, self.geometry.x_lower, self.geometry.z)
 
-    def set_z_expr(self, foil_type="plate") -> None:
-        if foil_type == "plate":
-            # For a flat plate, use the rotated endpoint y-expression as z(x)=constant along the plate
-            # Use the geometry's default symbols by calling without arguments
-            x, theta = sp.symbols('x theta', real=True, positive=True)
-            self.x_sym = x
-            self.theta_sym = theta
-            self.z_expr = self.geometry.symbolic_endpoints()[0][1]  # y0 expression
-            return
+    def alpha_n(self, n: int) -> float:
+        assert self.x is not None, "x-coordinates must be set before computing alpha_n."
+        assert self.c is not None, "Chord length must be set before computing alpha_n."
         
-    def alpha_0(self) -> sp.Expr:
-        c = self.geometry.chord['symbol']
+        theta =  (self.c/2.0) * (1 - np.cos(np.pi * self.x / self.c))
+        dzdx_theta = np.gradient(self.z, theta)
+        integrand = dzdx_theta * np.cos(n*theta)
+        return (2.0 / np.pi) * np.trapz(integrand, theta)
 
-        x = self.x_sym
-        theta = self.theta_sym
-        x_sub = (c/2.0) * (1 - sp.cos(theta)
-                           )
-        z_expr = self.z_expr
-        dzdx = sp.diff(z_expr, sp.Symbol('x', real=True))
-        dzdx_theta = sp.simplify(dzdx.subs(x, x_sub))
-        integrand = dzdx_theta * (sp.cos(theta) - 1)
-        alpha_L0 = (1 / sp.pi) * sp.integrate(integrand, (theta, 0, sp.pi))
-        return sp.simplify(sp.together(alpha_L0))
-    
-    def solve(self) -> dict:
-        # Thin airfoil theory for a flat plate: cl = 2*pi*(alpha - alpha_0)
-        # Use the model's alpha_rad directly to avoid requiring a geometry instance.
-        alpha_0 = self.alpha_0()  # For flat plate, camber is zero.
-        # Optional: keep z_expr if set, but don't require it
-        print(f"Computed alpha_0 (radians): {alpha_0}")
-        cl = 2.0 * math.pi * (self.alpha_rad - alpha_0)
+    def solve(self):
+
+        a = self.alpha_rad
+
         results = {
-            'cl': cl,
-            'alpha_rad': float(self.alpha_rad),
+            "cl": 2*math.pi*(a - self.alpha_n(0)),
+            "cm": (math.pi/4) * (self.alpha_n(2) - self.alpha_n(1)),
+            "alpha_rad": self.alpha_rad,
         }
         return results
-    pass

@@ -126,6 +126,8 @@ if __name__ == "__main__":
     naca2412.set_camber()
     naca2412.plot_airfoil()
 
+    a_L_0 = 0.0 # Place holder (replace with analytical TAT evaluation).
+
     Cl_2412 = []
     Cm_cg_2412 = []
 
@@ -157,7 +159,7 @@ if __name__ == "__main__":
 
         Cl_2412.append(results["cl"])
         Cm_cg_2412.append(results["cm_cg"])
-        Cl_TAT_2412.append(2 * math.pi * a)
+        Cl_TAT_2412.append(2 * math.pi * (a - a_L_0))
         Cm_cg_TAT_2412.append(0.0)
 
     # Plot results for NACA 2412.
@@ -182,11 +184,3 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig(f"weisingers_approx_results_naca{naca2412.naca_code}.png")
     plt.clf()
-
-
-
-
-
-
-
-    pass
