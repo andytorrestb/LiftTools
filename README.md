@@ -16,21 +16,16 @@ LiftTools/
 ├── data/
 │   ├── NACA0012.dat
 │   └── NACA2412.dat
-├── src/
-│   ├── geometry/
-│   │   ├── Airfoil.py
-│   │   ├── FlatPlate.py
-│   │   └── NACA.py
-│   ├── models/
-│   │   ├── AirFoilModel.py
-│   │   ├── ThinAirfoilTheory.py
-│   │   ├── ThinAirfoilTheoryOld.py
-│   │   └── WeisingersApprox.py
-│   └── symbolic/
-│       └── utils.py
-└── tests/
-    ├── test_flatplate.py
-    └── test_thin_airfoil_theory.py
+└── src/
+    ├── geometry/
+    │   ├── Airfoil.py
+    │   ├── FlatPlate.py
+    │   └── NACA.py
+    └── models/
+        ├── AirFoilModel.py
+        ├── ThinAirfoilTheory.py
+        ├── ThinAirfoilTheoryOld.py
+        └── WeisingersApprox.py
 ```
 
 ## Key Components
