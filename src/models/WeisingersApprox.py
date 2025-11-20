@@ -52,11 +52,11 @@ class WeisingersApprox(AirfoilModel):
         self.flap_panel_x = flap_panel_x
         self.flap_panel_z = flap_panel_z
         # Debug prints to verify discretization
-        print("Set panels:")
-        print("  Wing panel x:", self.wing_panel_x)
-        print("  Wing panel z:", self.wing_panel_z)
-        print("  Flap panel x:", self.flap_panel_x)
-        print("  Flap panel z:", self.flap_panel_z)
+        # print("Set panels:")
+        # print("  Wing panel x:", self.wing_panel_x)
+        # print("  Wing panel z:", self.wing_panel_z)
+        # print("  Flap panel x:", self.flap_panel_x)
+        # print("  Flap panel z:", self.flap_panel_z)
 
     def plot_panels(self, file_suffix="") -> None:
         plt.figure(figsize=(10, 4))
@@ -113,11 +113,11 @@ class WeisingersApprox(AirfoilModel):
         self.C = C
         self.QC = QC
         self.TC = TC
-        print("Set points:")
-        print("  Control points C:", self.C)
-        print(self.C.shape)
-        print("  Vortex points QC:", self.QC)
-        print("  Tangency points TC:", self.TC)
+        # print("Set points:")
+        # print("  Control points C:", self.C)
+        # print(self.C.shape)
+        # print("  Vortex points QC:", self.QC)
+        # print("  Tangency points TC:", self.TC)
 
     def compute_distances(self) -> None:
         # Calculate distances Rij from each vortex point to each control point
@@ -209,7 +209,7 @@ class WeisingersApprox(AirfoilModel):
 
         # Solve for vortex strengths G
         G = np.linalg.solve(A, b)
-        print("Solved vortex strengths G:", G)
+        # print("Solved vortex strengths G:", G)
         L = self.rho_inf * self.U_inf * np.sum(G)
         M_cg = 0
 
@@ -229,7 +229,7 @@ class WeisingersApprox(AirfoilModel):
             'cm_cg': cm_cg,
             'G': G
         }
-        print("Weisinger's Approximation results:", results)
+        # print("Weisinger's Approximation results:", results)
         return results
 
     def set_flap(self, deflection_rad: float, length_le: float) -> None:
