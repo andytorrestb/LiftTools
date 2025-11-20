@@ -86,9 +86,9 @@ class NACA(Airfoil):
         self.x_lower = np.array(x[mid_index:])
         self.y_lower = np.array(y[mid_index:])
 
-        print("Airfoil coordinates loaded from DAT file.")
-        print(f"Upper surface points: {self.x_upper}")
-        print(f"Lower surface points: {self.x_lower}")
+        # print("Airfoil coordinates loaded from DAT file.")
+        # print(f"Upper surface points: {self.x_upper}")
+        # print(f"Lower surface points: {self.x_lower}")
 
     pass
 
