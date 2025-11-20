@@ -106,6 +106,7 @@ if __name__ == "__main__":
     print(f"Moment Coefficient about CG (Cm_cg): {results_highres['cm_cg']:.4f}")
 
     G = results_highres['G']
+    L = rho_inf*U_inf*G
     # print(f"Circulation (G): {G:.4f} m^2/s")
     n_panels = np.linspace(0, 1, wa_naca0012_highres.n_panels)
     # Plot high resolution results.
@@ -118,6 +119,17 @@ if __name__ == "__main__":
     plt.grid()
     plt.tight_layout()
     plt.savefig(f"weisingers_approx_circulation_naca{naca0012.naca_code}.png")
+    plt.clf()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(n_panels, L, marker='o', label="Lift Distribution (L)")
+    plt.xlabel("Panel Index")
+    plt.ylabel("Lift per Unit Span (N/m)")
+    plt.title(f"Lift Distribution for NACA {naca0012.naca_code} (N=100)")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(f"weisingers_approx_lift_naca{naca0012.naca_code}.png")
     plt.clf()
 
     # Study 3) NACA 2412 airfoil (low resolution)
